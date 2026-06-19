@@ -40,8 +40,14 @@
         * { box-sizing: border-box; font-family: 'Cairo', sans-serif; transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease; }
         body { margin: 0; background: var(--bg-body); color: var(--text-main); padding-bottom: 40px; }
         
-        .login-card { max-width: 400px; margin: 100px auto; background: var(--bg-card); padding: 40px 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid var(--border); text-align: center; }
+        .login-card { max-width: 400px; margin: 100px auto; background: var(--bg-card); padding: 40px 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid var(--border); text-align: center; position: relative; }
         .login-card h2 { color: var(--primary); margin-bottom: 25px; font-weight: 700; }
+
+        /* ستايل لمبة حالة اتصال الفايربيز */
+        .db-status-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.2); padding: 6px 14px; border-radius: 30px; font-size: 12px; font-weight: 600; margin-bottom: 20px; border: 1px solid var(--border); }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #64748b; box-shadow: 0 0 8px #64748b; }
+        .status-dot.connected { background: var(--success); box-shadow: 0 0 10px var(--success); }
+        .status-dot.disconnected { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
 
         .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; display: none; }
         
@@ -105,12 +111,17 @@
 
 <div id="loginSection" class="login-card">
     <h2>منظومة IPTV الذكية الاحترافية</h2>
+    
+    <div class="db-status-badge">
+        <div id="statusDot" class="status-dot"></div>
+        <span id="statusText">جاري فحص الاتصال بالخادم...</span>
+    </div>
+
     <input type="password" id="adminPassword" placeholder="أدخل كلمة مرور اللوحة بأمان">
     <button onclick="loginAdmin()" class="btn-submit" id="loginBtn" style="width:100%; margin-top:20px;">دخول آمن</button>
 </div>
 
 <div id="adminDashboard" class="container">
-    
     <div class="header-bar">
         <h1>لوحة تحكم السيرفر</h1>
         <div class="navbar">
@@ -317,18 +328,39 @@
 </div>
 
 <script>
+// ========================================================
+// ✅ تم دمج بيانات الفايربيز الحقيقية والخاصة بمشروعك
+// ========================================================
 const firebaseConfig = {
-    apiKey: "AIzaSyC6f7D6P-O8D5R0XGfH3X5mK9_f3l1D2A",
-    authDomain: "iptv-panel-2026.firebaseapp.com",
-    databaseURL: "https://iptv-panel-2026-default-rtdb.firebaseio.com",
-    projectId: "iptv-panel-2026",
-    storageBucket: "iptv-panel-2026.appspot.com",
-    messagingSenderId: "405928172930",
-    appId: "1:405928172930:web:d8f7e6d5c4b3a2f1e0d9c8"
+    apiKey: "AIzaSyBEmcbTRe7EhAmVCFCxyv4O1Lq8lC18cwU",
+    authDomain: "iptvpanel-98f75.firebaseapp.com",
+    databaseURL: "https://iptvpanel-98f75-default-rtdb.firebaseio.com",
+    projectId: "iptvpanel-98f75",
+    storageBucket: "iptvpanel-98f75.firebasestorage.app",
+    messagingSenderId: "651986284837",
+    appId: "1:651986284837:web:2ad1eb547024cd1816aacc",
+    measurementId: "G-9YWPBVZQFL"
 };
 
+// تهيئة الفايربيز
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+
+// فحص فوري لحالة الاتصال الحقيقية بالفايربيز وإضاءة المؤشر
+const connectedRef = db.ref(".info/connected");
+connectedRef.on("value", (snap) => {
+    const dot = document.getElementById("statusDot");
+    const text = document.getElementById("statusText");
+    if (snap.val() === true) {
+        dot.className = "status-dot connected";
+        text.innerText = "متصل بالخادم وجاهز";
+        text.style.color = "var(--success)";
+    } else {
+        dot.className = "status-dot disconnected";
+        text.innerText = "خطأ في الاتصال بالخادم!";
+        text.style.color = "var(--danger)";
+    }
+});
 
 let today = new Date();
 today.setMonth(today.getMonth() + 1);
