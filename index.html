@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة IPTV الاحترافية الشاملة - نسخة آمنة</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
+    <style>
+        :root {
+            --bg-body: #0f172a;
+            --bg-card: #1e293b;
+            --primary: #38bdf8;
+            --primary-hover: #0ea5e9;
+            --success: #4ade80;
+            --danger: #f87171;
+            --warning: #fbbf24;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --table-th: #131c2e;
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f1f5f9;
+            --bg-card: #ffffff;
+            --primary: #0284c7;
+            --primary-hover: #0369a1;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --warning: #d97706;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+            --table-th: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; font-family: 'Cairo', sans-serif; transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease; }
+        body { margin: 0; background: var(--bg-body); color: var(--text-main); padding-bottom: 40px; }
+        
+        .login-card { max-width: 400px; margin: 100px auto; background: var(--bg-card); padding: 40px 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid var(--border); text-align: center; }
+        .login-card h2 { color: var(--primary); margin-bottom: 25px; font-weight: 700; }
+
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; display: none; }
+        
+        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid var(--border); padding-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+        .header-bar h1 { font-size: 24px; color: var(--primary); margin: 0; }
+        
+        .navbar { display: flex; background: var(--bg-card); border-radius: 12px; padding: 6px; gap: 10px; border: 1px solid var(--border); }
+        .nav-tab { padding: 10px 20px; color: var(--text-muted); cursor: pointer; font-weight: 600; border-radius: 8px; font-size: 14px; }
+        .nav-tab.active { background: var(--primary); color: var(--bg-body); }
+        
+        .top-left-actions { display: flex; align-items: center; gap: 12px; }
+        .theme-toggle-btn { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); padding: 10px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+        .btn-logout { background: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        .btn-logout:hover { background: var(--danger); color: white; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: var(--bg-card); border: 1px solid var(--border); padding: 20px; border-radius: 12px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+        .stat-card h3 { margin: 0; font-size: 14px; color: var(--text-muted); }
+        .stat-card p { margin: 10px 0 0 0; font-size: 28px; font-weight: 700; color: var(--primary); }
+
+        .tab-content { display: none; animation: fadeIn 0.4s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .form-section { background: var(--bg-card); border: 1px solid var(--border); padding: 25px; border-radius: 14px; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+        .form-section h3 { margin-top: 0; color: var(--text-main); margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; align-items: end; }
+        .form-grid.vod-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-group label { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+        
+        input, select { background: var(--bg-body); border: 1px solid var(--border); padding: 12px; border-radius: 8px; color: var(--text-main); font-size: 14px; width: 100%; height: 48px; }
+        input:focus, select:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15); }
+        
+        .btn-submit { background: var(--primary); color: var(--bg-body); border: none; padding: 13px 25px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 15px; height: 48px; }
+        .btn-submit:hover { transform: translateY(-1px); filter: brightness(1.1); }
+
+        .table-responsive { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.04); margin-bottom: 40px; }
+        table { width: 100%; border-collapse: collapse; text-align: right; }
+        th { background: var(--table-th); color: var(--text-main); padding: 16px; font-size: 14px; font-weight: 600; border-bottom: 1px solid var(--border); }
+        td { padding: 16px; font-size: 14px; color: var(--text-main); border-bottom: 1px solid var(--border); vertical-align: middle; }
+        
+        .code-link { background: var(--bg-body); padding: 8px 12px; font-family: monospace; font-size: 12px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--border); color: var(--primary); width: 100%; max-width: 280px; }
+        .btn-copy { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border); }
+        .btn-copy:hover { color: var(--primary); background: rgba(255,255,255,0.05); }
+
+        .badge { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; }
+        .badge-active { background: rgba(74, 222, 128, 0.15); color: var(--success); }
+        .badge-expired { background: rgba(248, 113, 113, 0.15); color: var(--danger); }
+        
+        .actions-btn { display: flex; gap: 8px; }
+        .actions-btn button { padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; }
+        .btn-table-edit { background: rgba(251, 191, 36, 0.15); color: var(--warning); }
+        .btn-table-edit:hover { background: var(--warning); color: #0f172a; }
+        .btn-table-delete { background: rgba(248, 113, 113, 0.15); color: var(--danger); }
+        .btn-table-delete:hover { background: var(--danger); color: white; }
+    </style>
+</head>
+<body data-theme="dark">
+
+<div id="loginSection" class="login-card">
+    <h2>منظومة IPTV الذكية الاحترافية</h2>
+    <input type="password" id="adminPassword" placeholder="أدخل كلمة مرور اللوحة بأمان">
+    <button onclick="loginAdmin()" class="btn-submit" id="loginBtn" style="width:100%; margin-top:20px;">دخول آمن</button>
+</div>
+
+<div id="adminDashboard" class="container">
+    
+    <div class="header-bar">
+        <h1>لوحة تحكم السيرفر</h1>
+        <div class="navbar">
+            <div class="nav-tab active" onclick="switchTab('channelsTab', this)">📺 إدارة القنوات</div>
+            <div class="nav-tab" onclick="switchTab('vodTab', this)">🎬 الأفلام والمسلسلات (VOD)</div>
+            <div class="nav-tab" onclick="switchTab('usersTab', this)">👥 إدارة المشتركين</div>
+        </div>
+        <div class="top-left-actions">
+            <button class="theme-toggle-btn" onclick="toggleTheme()" id="themeBtn">☀️ الوضع الفاتح</button>
+            <button onclick="logoutAdmin()" class="btn-logout">تسجيل الخروج</button>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>إجمالي القنوات</h3>
+            <p id="statChannels">0</p>
+        </div>
+        <div class="stat-card">
+            <h3>المحتوى (VOD)</h3>
+            <p id="statVOD">0</p>
+        </div>
+        <div class="stat-card">
+            <h3>إجمالي المشتركين</h3>
+            <p id="statUsers">0</p>
+        </div>
+        <div class="stat-card">
+            <h3>الاشتراكات النشطة</h3>
+            <p id="statActiveUsers" style="color: var(--success)">0</p>
+        </div>
+    </div>
+
+    <div class="form-section" style="border: 1px solid var(--primary); background: rgba(56, 189, 248, 0.02);">
+        <h3>🔗 إدارة الباقات والمصادر ومفاتيح TMDB</h3>
+        <div class="form-grid" style="margin-bottom: 20px;">
+            <div class="form-group" style="grid-column: span 2;">
+                <label>مفتاح TMDB API Key الخاص بك (لجلب بيانات الأفلام تلقائياً)</label>
+                <input type="text" id="tmdbApiKey" placeholder="أدخل الـ API Key من موقع TMDB">
+            </div>
+            <button onclick="saveTmdbKey()" class="btn-submit" style="background: var(--warning); color: #0f172a;">حفظ مفتاح TMDB</button>
+        </div>
+        <hr style="border:0; border-top: 1px solid var(--border); margin: 20px 0;">
+        <form id="providerForm" onsubmit="saveProvider(event)">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>اسم المصدر</label>
+                    <input type="text" id="providerName" placeholder="مثال: سيرفر Stalker 4K" required>
+                </div>
+                <div class="form-group">
+                    <label>نوع المصدر</label>
+                    <select id="providerType" onchange="toggleMacField()">
+                        <option value="normal">🌐 مصدر عادي (Base URL)</option>
+                        <option value="stalker">📺 سيرفر Stalker (تغيير الماك تلقائي)</option>
+                    </select>
+                </div>
+                <div class="form-group" id="macFieldGroup" style="display: none;">
+                    <label>الـ MAC Address الحالي</label>
+                    <input type="text" id="providerMac" placeholder="00:1A:79:...">
+                </div>
+            </div>
+            <div class="form-grid" style="margin-top: 15px;">
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>الرابط الأساسي للمصدر</label>
+                    <input type="text" id="providerBaseUrl" placeholder="العادي: http://site.com/live/  |  الـ Stalker ضع [MAC] مكان الماك: http://site.com/live.php?mac=[MAC]&stream=" required>
+                </div>
+                <button type="submit" class="btn-submit" style="background: var(--success); color: #0f172a;">حفظ المصدر</button>
+            </div>
+        </form>
+        <div id="providersList" style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px;"></div>
+    </div>
+
+    <div id="channelsTab" class="tab-content active">
+        <div class="form-section">
+            <h3 id="channelFormTitle">إضافة قناة / مصدر جديد</h3>
+            <form id="channelForm" onsubmit="saveChannel(event)">
+                <input type="hidden" id="channelId">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>اسم القناة الأساسي</label>
+                        <input type="text" id="channelName" placeholder="مثال: Bein Sports HD" required>
+                    </div>
+                    <div class="form-group">
+                        <label>تبعية المصدر الرئيسي</label>
+                        <select id="channelSourceSelect"><option value="direct">🔗 رابط مباشر كامل (خارجي بدون دمج)</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label>رابط المصدر / المسار الفرعي (Auto)</label>
+                        <input type="text" id="channelUrl" placeholder="المسار الفرعي أو الرابط الكامل" required>
+                    </div>
+                    <div class="form-group">
+                        <label>الفئة / المجموعة</label>
+                        <input type="text" id="channelCategory" placeholder="مثال: Sports" required>
+                    </div>
+                </div>
+                <div class="form-grid" style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
+                    <div class="form-group">
+                        <label>مسار جودة FHD (اختياري)</label>
+                        <input type="text" id="urlFHD" placeholder="رابط أو معرف جودة 1080p">
+                    </div>
+                    <div class="form-group">
+                        <label>مسار جودة HD (اختياري)</label>
+                        <input type="text" id="urlHD" placeholder="رابط أو معرف جودة 720p">
+                    </div>
+                    <div class="form-group">
+                        <label>مسار جودة SD (اختياري)</label>
+                        <input type="text" id="urlSD" placeholder="رابط أو معرف جودة 480p">
+                    </div>
+                    <div class="form-group">
+                        <label>رابط لوجو القناة (اختياري)</label>
+                        <input type="text" id="channelLogo" placeholder="https://site.com/logo.png">
+                    </div>
+                </div>
+                <div class="form-grid" style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
+                    <div class="form-group">
+                        <label>User-Agent مخصص (اختياري)</label>
+                        <input type="text" id="channelUA" placeholder="Mozilla/5.0 ...">
+                    </div>
+                    <div class="form-group">
+                        <label>Referer مخصص (اختياري)</label>
+                        <input type="text" id="channelReferer" placeholder="http://site.com">
+                    </div>
+                    <button type="submit" class="btn-submit" id="btnChannelSubmit">حفظ بيانات القناة</button>
+                </div>
+            </form>
+        </div>
+        <div class="table-responsive">
+            <table>
+                <thead><tr><th>اسم القناة</th><th>الفئة</th><th>المصدر التابع</th><th>الـ Headers</th><th>إجراءات</th></tr></thead>
+                <tbody id="channelsTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="vodTab" class="tab-content">
+        <div class="form-section">
+            <h3 id="vodFormTitle">إضافة فيلم أو مسلسل عبر TMDB ذكياً</h3>
+            <form id="vodForm" onsubmit="saveVod(event)">
+                <input type="hidden" id="vodId">
+                <div class="form-grid vod-grid">
+                    <div class="form-group">
+                        <label>النوع</label>
+                        <select id="vodType">
+                            <option value="movie">🎬 فيلم منفرد</option>
+                            <option value="series">🍿 مسلسل (حلقة/موسم كامل)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>رقم ID من TMDB</label>
+                        <input type="text" id="tmdbId" placeholder="مثال للفيلم: 475557" required>
+                    </div>
+                    <div class="form-group">
+                        <label>المصدر التابع له الرابط</label>
+                        <select id="vodSourceSelect"><option value="direct">🔗 رابط مباشر كامل (بدون دمج)</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label>مسار أو رابط فيديو المشاهدة</label>
+                        <input type="text" id="vodUrl" placeholder="رابط الفيلم أو مسار الفيديو" required>
+                    </div>
+                    <div class="form-group">
+                        <label>الفئة / التصنيف بالسيرفر</label>
+                        <input type="text" id="vodCategory" placeholder="مثال: أفلام أكشن عربية" required>
+                    </div>
+                    <button type="submit" class="btn-submit" style="background: var(--primary);">حفظ في السيرفر</button>
+                </div>
+            </form>
+        </div>
+        <div class="table-responsive">
+            <table>
+                <thead><tr><th>البوستر والاسم</th><th>النوع</th><th>المجموعة</th><th>رابط المحتوى</th><th>إجراءات</th></tr></thead>
+                <tbody id="vodTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="usersTab" class="tab-content">
+        <div class="form-section">
+            <h3 id="userFormTitle">إنشاء مشترك جديد</h3>
+            <form id="userForm" onsubmit="saveUser(event)">
+                <input type="hidden" id="isEditMode" value="false">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>اسم المستخدم</label>
+                        <input type="text" id="username" placeholder="Username" required>
+                    </div>
+                    <div class="form-group">
+                        <label>كلمة المرور</label>
+                        <input type="text" id="password" placeholder="Password" required>
+                    </div>
+                    <div class="form-group">
+                        <label>تاريخ انتهاء الاشتراك</label>
+                        <input type="date" id="expireDate" required>
+                    </div>
+                    <button type="submit" class="btn-submit" id="btnUserSubmit">تأكيد المشترك</button>
+                </div>
+            </form>
+        </div>
+        <div class="table-responsive">
+            <table>
+                <thead><tr><th>اسم المستخدم</th><th>كلمة المرور</th><th>تاريخ الانتهاء</th><th>الحالة</th><th>رابط التشغيل (M3U)</th><th>إجراءات</th></tr></thead>
+                <tbody id="usersTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyC6f7D6P-O8D5R0XGfH3X5mK9_f3l1D2A",
+    authDomain: "iptv-panel-2026.firebaseapp.com",
+    databaseURL: "https://iptv-panel-2026-default-rtdb.firebaseio.com",
+    projectId: "iptv-panel-2026",
+    storageBucket: "iptv-panel-2026.appspot.com",
+    messagingSenderId: "405928172930",
+    appId: "1:405928172930:web:d8f7e6d5c4b3a2f1e0d9c8"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let today = new Date();
+today.setMonth(today.getMonth() + 1);
+document.getElementById('expireDate').value = today.toISOString().split('T')[0];
+
+db.ref('settings/tmdbKey').on('value', snap => { if(snap.exists()) document.getElementById('tmdbApiKey').value = snap.val(); });
+function saveTmdbKey() {
+    const key = document.getElementById('tmdbApiKey').value.trim();
+    db.ref('settings/tmdbKey').set(key).then(() => alert('تم حفظ مفتاح TMDB بنجاح!'));
+}
+
+const urlParams = new URLSearchParams(window.location.search);
+const reqUser = urlParams.get('u');
+const reqPass = urlParams.get('p');
+
+if (reqUser && reqPass) {
+    document.getElementById('loginSection').style.display = 'none';
+    db.ref('users/' + reqUser).once('value').then((userSnapshot) => {
+        const userData = userSnapshot.val();
+        const currentDate = new Date().toISOString().split('T')[0];
+        if (userData && userData.password === reqPass && currentDate <= userData.expire) {
+            db.ref('providers').once('value').then((providersSnap) => {
+                const providersList = providersSnap.val() || {};
+                db.ref('channels').once('value').then((channelSnapshot) => {
+                    const channelsData = channelSnapshot.val();
+                    let m3uContent = "#EXTM3U\n";
+                    
+                    const getFullUrl = (subPath, sourceId) => {
+                        if (!subPath || subPath.trim() === "") return "";
+                        const path = subPath.trim();
+                        if (path.startsWith("http://") || path.startsWith("https://") || sourceId === "direct") return path;
+                        const activeProvider = providersList[sourceId];
+                        if (activeProvider) {
+                            if (activeProvider.type === 'stalker') {
+                                let finalUrl = activeProvider.baseUrl.trim().replace("[MAC]", activeProvider.mac.trim()) + path;
+                                if (!finalUrl.includes("&extension=")) finalUrl += "&extension=m3u8";
+                                return finalUrl;
+                            } else if (activeProvider.baseUrl) {
+                                return activeProvider.baseUrl.trim() + path;
+                            }
+                        }
+                        return path;
+                    };
+
+                    if (channelsData) {
+                        for (let id in channelsData) {
+                            const stream = channelsData[id];
+                            const finalAuto = getFullUrl(stream.url, stream.sourceId);
+                            const finalFHD = getFullUrl(stream.urlFHD, stream.sourceId);
+                            const finalHD = getFullUrl(stream.urlHD, stream.sourceId);
+                            const finalSD = getFullUrl(stream.urlSD, stream.sourceId);
+                            const hasMultipleQualities = (finalFHD || finalHD || finalSD);
+                            
+                            if (!hasMultipleQualities) {
+                                let m3uLine = `#EXTINF:-1 tvg-name="${stream.name}" group-title="${stream.category}"`;
+                                if (stream.logo) m3uLine += ` tvg-logo="${stream.logo.trim()}"`;
+                                m3uLine += `,${stream.name}\n`;
+                                if (stream.ua) m3uContent += `#EXTVLCOPT:http-user-agent=${stream.ua.trim()}\n`;
+                                if (stream.referer) m3uContent += `#EXTVLCOPT:http-referrer=${stream.referer.trim()}\n`;
+                                m3uLine += `${finalAuto}\n`;
+                                m3uContent += m3uLine;
+                            } else {
+                                let m3uLine = `#EXTINF:-1 tvg-name="${stream.name}" group-title="${stream.category}"`;
+                                if (stream.logo) m3uLine += ` tvg-logo="${stream.logo.trim()}"`;
+                                m3uLine += `,${stream.name}\n`;
+                                m3uContent += m3uLine;
+                                if (stream.ua) m3uContent += `#EXTVLCOPT:http-user-agent=${stream.ua.trim()}\n`;
+                                if (stream.referer) m3uContent += `#EXTVLCOPT:http-referrer=${stream.referer.trim()}\n`;
+                                if (finalFHD) m3uContent += `#EXT-X-STREAM-INF:BANDWIDTH=8000000,NAME="FHD (1080p)",RESOLUTION=1920x1080\n${finalFHD}\n`;
+                                if (finalHD) m3uContent += `#EXT-X-STREAM-INF:BANDWIDTH=4000000,NAME="HD (720p)",RESOLUTION=1280x720\n${finalHD}\n`;
+                                if (finalSD) m3uContent += `#EXT-X-STREAM-INF:BANDWIDTH=1500000,NAME="SD (480p)",RESOLUTION=854x480\n${finalSD}\n`;
+                                m3uContent += `#EXT-X-STREAM-INF:BANDWIDTH=3000000,NAME="Auto Quality"\n${finalAuto}\n`;
+                            }
+                        }
+                    }
+
+                    db.ref('vod').once('value').then((vodSnapshot) => {
+                        const vodData = vodSnapshot.val();
+                        if (vodData) {
+                            for (let id in vodData) {
+                                const item = vodData[id];
+                                const finalVodUrl = getFullUrl(item.url, item.sourceId);
+                                let m3uLine = `#EXTINF:-1 tvg-name="${item.title}" tvg-logo="${item.poster}" group-title="${item.category}",${item.title}\n${finalVodUrl}\n`;
+                                m3uContent += m3uLine;
+                            }
+                        }
+                        let blob = new Blob([m3uContent], { type: "application/x-mpegurl" });
+                        let a = document.createElement("a");
+                        a.href = URL.createObjectURL(blob);
+                        a.download = "playlist.m3u";
+                        a.click();
+                    });
+                });
+            });
+        } else {
+            document.body.innerHTML = "<h3 style='color:#f87171; text-align:center; margin-top:50px;'>عذراً، الحساب غير صحيح أو منتهي!</h3>";
+        }
+    });
+}
+
+function loginAdmin() {
+    const inputPass = document.getElementById('adminPassword').value;
+    const loginBtn = document.getElementById('loginBtn');
+    if(!inputPass) { alert('برجاء إدخال كلمة المرور أولاً!'); return; }
+    loginBtn.innerText = "جاري التحقق الرقمي...";
+    loginBtn.disabled = true;
+
+    db.ref('adminPassword').once('value').then((snapshot) => {
+        const securePass = snapshot.val();
+        if (securePass && inputPass === securePass) {
+            sessionStorage.setItem('admin_auth', 'true');
+            showDashboard();
+        } else {
+            alert('كلمة المرور خاطئة تماماً! تأكد من إضافتها في الفايربيز أولاً.');
+            loginBtn.innerText = "دخول آمن";
+            loginBtn.disabled = false;
+        }
+    }).catch(err => {
+        alert('حدث خطأ في الاتصال بقاعدة البيانات!');
+        loginBtn.innerText = "دخول آمن";
+        loginBtn.disabled = false;
+    });
+}
+
+function logoutAdmin() { sessionStorage.removeItem('admin_auth'); location.reload(); }
+
+function showDashboard() {
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('adminDashboard').style.display = 'block';
+    loadProviders();
+    loadChannels();
+    loadVod();
+    loadUsers();
+    updateStats();
+}
+
+if (sessionStorage.getItem('admin_auth') === 'true' && !(reqUser && reqPass)) { showDashboard(); }
+
+function toggleTheme() {
+    const body = document.body;
+    const btn = document.getElementById('themeBtn');
+    if (body.getAttribute('data-theme') === 'dark') {
+        body.setAttribute('data-theme', 'light');
+        btn.innerText = "🌙 الوضع الداكن";
+    } else {
+        body.setAttribute('data-theme', 'dark');
+        btn.innerText = "☀️ الوضع الفاتح";
+    }
+}
+
+function toggleMacField() {
+    const type = document.getElementById('providerType').value;
+    const macGroup = document.getElementById('macFieldGroup');
+    macGroup.style.display = (type === 'stalker') ? 'flex' : 'none';
+    document.getElementById('providerMac').required = (type === 'stalker');
+}
+
+function switchTab(tabId, element) {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    element.classList.add('active');
+    updateStats();
+}
+
+function updateStats() {
+    db.ref('channels').once('value').then(snap => { document.getElementById('statChannels').innerText = snap.exists() ? Object.keys(snap.val()).length : 0; });
+    db.ref('vod').once('value').then(snap => { document.getElementById('statVOD').innerText = snap.exists() ? Object.keys(snap.val()).length : 0; });
+    db.ref('users').once('value').then(snap => {
+        const users = snap.val() || {};
+        document.getElementById('statUsers').innerText = Object.keys(users).length;
+        let activeCount = 0;
+        const currentDate = new Date().toISOString().split('T')[0];
+        for (let user in users) { if (currentDate <= users[user].expire) activeCount++; }
+        document.getElementById('statActiveUsers').innerText = activeCount;
+    });
+}
+
+function saveProvider(e) {
+    e.preventDefault();
+    const name = document.getElementById('providerName').value.trim();
+    const type = document.getElementById('providerType').value;
+    const baseUrl = document.getElementById('providerBaseUrl').value.trim();
+    const mac = document.getElementById('providerMac').value.trim();
+    db.ref('providers').push({ name: name, type: type, baseUrl: baseUrl, mac: mac }).then(() => {
+        document.getElementById('providerForm').reset();
+        toggleMacField();
+    });
+}
+
+function loadProviders() {
+    db.ref('providers').on('value', (snapshot) => {
+        const providers = snapshot.val();
+        const selectChannel = document.getElementById('channelSourceSelect');
+        const selectVod = document.getElementById('vodSourceSelect');
+        const listDiv = document.getElementById('providersList');
+        selectChannel.innerHTML = '<option value="direct">🔗 رابط مباشر كامل (خارجي بدون دمج)</option>';
+        selectVod.innerHTML = '<option value="direct">🔗 رابط مباشر كامل (بدون دمج)</option>';
+        listDiv.innerHTML = '';
+        if (providers) {
+            for (let id in providers) {
+                let text = providers[id].type === 'stalker' ? `📟 ${providers[id].name}` : `🌐 ${providers[id].name}`;
+                selectChannel.innerHTML += `<option value="${id}">${text}</option>`;
+                selectVod.innerHTML += `<option value="${id}">${text}</option>`;
+                let macBadge = providers[id].type === 'stalker' ? ` <small style="color:var(--primary)">[MAC: ${providers[id].mac}]</small>` : '';
+                listDiv.innerHTML += `
+                    <span style="background:var(--bg-card); padding:6px 12px; border-radius:6px; border:1px solid var(--border); font-size:12px;">
+                        <strong>${providers[id].name}</strong>${macBadge}
+                        <strong style="color:var(--danger); cursor:pointer; margin-right:12px; font-size:14px;" onclick="deleteProvider('${id}')">×</strong>
+                    </span>`;
+            }
+        }
+    });
+}
+
+function deleteProvider(id) { if(confirm('هل تريد حذف هذا مصدر؟')) { db.ref('providers/' + id).remove(); } }
+
+function saveChannel(e) {
+    e.preventDefault();
+    const id = document.getElementById('channelId').value;
+    const channelData = {
+        name: document.getElementById('channelName').value.trim(),
+        sourceId: document.getElementById('channelSourceSelect').value,
+        url: document.getElementById('channelUrl').value.trim(),
+        category: document.getElementById('channelCategory').value.trim(),
+        logo: document.getElementById('channelLogo').value.trim(),
+        urlFHD: document.getElementById('urlFHD').value.trim(),
+        urlHD: document.getElementById('urlHD').value.trim(),
+        urlSD: document.getElementById('urlSD').value.trim(),
+        ua: document.getElementById('channelUA').value.trim(),
+        referer: document.getElementById('channelReferer').value.trim()
+    };
+    if (id) {
+        db.ref('channels/' + id).update(channelData).then(() => { resetChannelForm(); loadChannels(); updateStats(); });
+    } else {
+        db.ref('channels').push(channelData).then(() => { resetChannelForm(); loadChannels(); updateStats(); });
+    }
+}
+
+function loadChannels() {
+    db.ref('providers').once('value').then((pSnap) => {
+        const provs = pSnap.val() || {};
+        db.ref('channels').once('value').then((snapshot) => {
+            const channels = snapshot.val();
+            const tbody = document.getElementById('channelsTableBody');
+            tbody.innerHTML = '';
+            if (!channels) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">لا يوجد قنوات مضافة.</td></tr>'; return; }
+            for (let id in channels) {
+                let hasHeaders = (channels[id].ua || channels[id].referer) ? "مخصصة ⚙️" : "افتراضية 🌐";
+                let providerName = channels[id].sourceId === 'direct' ? "رابط مباشر" : (provs[channels[id].sourceId] ? provs[channels[id].sourceId].name : "غير معروف");
+                let logoImg = channels[id].logo ? `<img src="${channels[id].logo}" width="24" height="24" style="border-radius:4px; object-fit:cover; vertical-align:middle; margin-left:8px;">` : '📺 ';
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${logoImg}${channels[id].name}</strong></td>
+                        <td><span class="badge" style="background: rgba(56, 189, 248, 0.1); color: var(--primary);">${channels[id].category}</span></td>
+                        <td><span style="font-size:12px; font-weight:600; color:var(--success)">${providerName}</span></td>
+                        <td><span style="font-size:12px;">${hasHeaders}</span></td>
+                        <td>
+                            <div class="actions-btn">
+                                <button class="btn-table-edit" onclick="editChannel('${id}', '${channels[id].name}', '${channels[id].sourceId || 'direct'}', '${channels[id].url}', '${channels[id].category}', '${channels[id].logo || ''}', '${channels[id].urlFHD || ''}', '${channels[id].urlHD || ''}', '${channels[id].urlSD || ''}', '${channels[id].ua || ''}', '${channels[id].referer || ''}')">تعديل</button>
+                                <button class="btn-table-delete" onclick="deleteChannel('${id}')">حذف</button>
+                            </div>
+                        </td>
+                    </tr>`;
+            }
+        });
+    });
+}
+
+function editChannel(id, name, sourceId, url, category, logo, urlFHD, urlHD, urlSD, ua, referer) {
+    document.getElementById('channelFormTitle').innerText = "تعديل بيانات القناة";
+    document.getElementById('btnChannelSubmit').innerText = "تحديث البيانات";
+    document.getElementById('channelId').value = id;
+    document.getElementById('channelName').value = name;
+    document.getElementById('channelSourceSelect').value = sourceId || "direct";
+    document.getElementById('channelUrl').value = url;
+    document.getElementById('channelCategory').value = category;
+    document.getElementById('channelLogo').value = logo;
+    document.getElementById('urlFHD').value = urlFHD;
+    document.getElementById('urlHD').value = urlHD;
+    document.getElementById('urlSD').value = urlSD;
+    document.getElementById('channelUA').value = ua;
+    document.getElementById('channelReferer').value = referer;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function deleteChannel(id) { if (confirm('هل أنت متأكد من حذف هذه القناة؟')) { db.ref('channels/' + id).remove().then(() => { loadChannels(); updateStats(); }); } }
+function resetChannelForm() { document.getElementById('channelForm').reset(); document.getElementById('channelId').value = ''; document.getElementById('channelFormTitle').innerText = "إضافة قناة / مصدر جديد"; }
+
+async function saveVod(e) {
+    e.preventDefault();
+    const id = document.getElementById('vodId').value;
+    const type = document.getElementById('vodType').value;
+    const tmdbId = document.getElementById('tmdbId').value.trim();
+    const sourceId = document.getElementById('vodSourceSelect').value;
+    const url = document.getElementById('vodUrl').value.trim();
+    const category = document.getElementById('vodCategory').value.trim();
+    const apiKey = document.getElementById('tmdbApiKey').value.trim();
+
+    if (!apiKey) { alert('برجاء إدخال مفتاح TMDB أولاً وحفظه بالصفحة لتتمكن من جلب البيانات تلقائياً!'); return; }
+
+    let title = "محتوى غير معروف";
+    let poster = "https://via.placeholder.com/150x220?text=No+Poster";
+    
+    try {
+        const tmdbType = (type === 'movie') ? 'movie' : 'tv';
+        const response = await fetch(`https://api.themoviedb.org/3/${tmdbType}/${tmdbId}?api_key=${apiKey}&language=ar-SA`);
+        if (response.ok) {
+            const data = await response.json();
+            title = data.title || data.name;
+            if (data.poster_path) poster = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
+        } else {
+            const responseEn = await fetch(`https://api.themoviedb.org/3/${tmdbType}/${tmdbId}?api_key=${apiKey}&language=en-US`);
+            if(responseEn.ok) {
+                const dataEn = await responseEn.json();
+                title = dataEn.title || dataEn.name;
+                if (dataEn.poster_path) poster = `https://image.tmdb.org/t/p/w500${dataEn.poster_path}`;
+            }
+        }
+    } catch (err) { console.error('خطأ أثناء جلب بيانات من TMDB:', err); }
+
+    const vodData = { title, poster, type, tmdbId, sourceId, url, category };
+
+    if (id) {
+        db.ref('vod/' + id).update(vodData).then(() => { resetVodForm(); loadVod(); updateStats(); });
+    } else {
+        db.ref('vod').push(vodData).then(() => { resetVodForm(); loadVod(); updateStats(); });
+    }
+}
+
+function loadVod() {
+    db.ref('vod').once('value').then((snapshot) => {
+        const vod = snapshot.val();
+        const tbody = document.getElementById('vodTableBody');
+        tbody.innerHTML = '';
+        if (!vod) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">لا يوجد محتوى مضاف حالياً.</td></tr>'; return; }
+        for (let id in vod) {
+            let typeText = vod[id].type === 'movie' ? "🎬 فيلم" : "🍿 مسلسل";
+            tbody.innerHTML += `
+                <tr>
+                    <td><img src="${vod[id].poster}" width="34" style="border-radius:4px; margin-left:8px; vertical-align:middle;"> <strong>${vod[id].title}</strong></td>
+                    <td><span style="font-size:12px; font-weight:600;">${typeText}</span></td>
+                    <td><span class="badge" style="background:rgba(74, 222, 128, 0.1); color:var(--success);">${vod[id].category}</span></td>
+                    <td><span style="font-size:11px; font-family:monospace; color:var(--text-muted);">${vod[id].url.substring(0, 25)}...</span></td>
+                    <td><div class="actions-btn"><button class="btn-table-delete" onclick="deleteVod('${id}')">حذف</button></div></td>
+                </tr>`;
+        }
+    });
+}
+function deleteVod(id) { if (confirm('هل أنت متأكد من حذف هذا العمل؟')) { db.ref('vod/' + id).remove().then(() => { loadVod(); updateStats(); }); } }
+function resetVodForm() { document.getElementById('vodForm').reset(); document.getElementById('vodId').value = ''; }
+
+function saveUser(e) {
+    e.preventDefault();
+    const user = document.getElementById('username').value.trim();
+    const pass = document.getElementById('password').value.trim();
+    const expire = document.getElementById('expireDate').value;
+    const isEdit = document.getElementById('isEditMode').value;
+    const userData = { password: pass, expire: expire };
+
+    if (isEdit === "true") {
+        db.ref('users/' + user).update(userData).then(() => { resetUserForm(); loadUsers(); updateStats(); });
+    } else {
+        db.ref('users/' + user).once('value').then((snapshot) => {
+            if (snapshot.exists()) { alert('اسم المستخدم موجود بالفعل!'); } 
+            else { db.ref('users/' + user).set(userData).then(() => { resetUserForm(); loadUsers(); updateStats(); }); }
+        });
+    }
+}
+
+function loadUsers() {
+    db.ref('users').once('value').then((snapshot) => {
+        const users = snapshot.val();
+        const tbody = document.getElementById('usersTableBody');
+        tbody.innerHTML = '';
+        const currentUrl = window.location.href.split('?')[0];
+        const currentDate = new Date().toISOString().split('T')[0];
+        if (!users) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">لا يوجد مشتركين.</td></tr>'; return; }
+        for (let username in users) {
+            const isExpired = currentDate > users[username].expire;
+            const userLink = `${currentUrl}?u=${encodeURIComponent(username)}&p=${encodeURIComponent(users[username].password)}`;
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong>${username}</strong></td>
+                    <td>${users[username].password}</td>
+                    <td>${users[username].expire}</td>
+                    <td><span class="badge ${isExpired ? 'badge-expired' : 'badge-active'}">${isExpired ? 'منتهي' : 'نشط'}</span></td>
+                    <td><div class="code-link"><span>${userLink.substring(0, 20)}...</span><button class="btn-copy" onclick="copyToClipboard('${userLink}')">نسخ</button></div></td>
+                    <td><div class="actions-btn"><button class="btn-table-edit" onclick="editUser('${username}', '${users[username].password}', '${users[username].expire}')">تعديل</button><button class="btn-table-delete" onclick="deleteUser('${username}')">حذف</button></div></td>
+                </tr>`;
+        }
+    });
+}
+function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => { alert("تم نسخ رابط المشترك بنجاح!"); }); }
+function editUser(username, password, expire) {
+    document.getElementById('userFormTitle').innerText = `تعديل بيانات المشترك (${username})`;
+    document.getElementById('btnUserSubmit').innerText = "تحديث البيانات";
+    document.getElementById('username').value = username;
+    document.getElementById('username').disabled = true;
+    document.getElementById('password').value = password;
+    document.getElementById('expireDate').value = expire;
+    document.getElementById('isEditMode').value = "true";
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function deleteUser(username) { if (confirm(`هل تريد حذف المشترك ${username} نهائياً؟`)) { db.ref('users/' + username).remove().then(() => { loadUsers(); updateStats(); }); } }
+function resetUserForm() { document.getElementById('userForm').reset(); document.getElementById('username').disabled = false; document.getElementById('isEditMode').value = "false"; document.getElementById('userFormTitle').innerText = "إنشاء مشترك جديد"; }
+</script>
+</body>
+</html>
